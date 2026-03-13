@@ -127,18 +127,15 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// ── Indexes ──
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 }, { sparse: true });
+// ── Indexes (email and googleId already have unique: true on the field) ──
 userSchema.index({ lastLocation: '2dsphere' });
 userSchema.index({ role: 1 });
 
 // ── Pre-save hook: hash password ──
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 // ── Instance method: compare passwords ──

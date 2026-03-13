@@ -79,10 +79,9 @@ const sosAlertSchema = new mongoose.Schema(
   }
 );
 
-// ── Indexes ──
+// ── Indexes (trackingToken already has unique: true on the field) ──
 sosAlertSchema.index({ userId: 1, status: 1 });
 sosAlertSchema.index({ location: '2dsphere' });
-sosAlertSchema.index({ trackingToken: 1 }, { unique: true });
 sosAlertSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('SOSAlert', sosAlertSchema);

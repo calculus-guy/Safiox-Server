@@ -50,9 +50,8 @@ const communityResponderSchema = new mongoose.Schema(
   }
 );
 
-// ── Indexes ──
+// ── Indexes (userId already has unique: true on the field) ──
 communityResponderSchema.index({ location: '2dsphere' });
 communityResponderSchema.index({ available: 1 });
-communityResponderSchema.index({ userId: 1 }, { unique: true });
 
 module.exports = mongoose.model('CommunityResponder', communityResponderSchema);

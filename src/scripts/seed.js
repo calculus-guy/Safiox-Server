@@ -14,7 +14,7 @@ const User = require('../models/User');
 const ADMIN_DATA = {
   name: 'Safiox Admin',
   email: 'admin@safiox.com',
-  phone: '+2340000000000',
+  phone: '+2349160703168',
   password: 'Admin@1234',
   role: 'admin',
   isEmailVerified: true,
