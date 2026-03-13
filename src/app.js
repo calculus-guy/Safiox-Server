@@ -55,11 +55,12 @@ app.use('/api/organizations', require('./routes/organization.routes'));
 app.use('/api/community-responders', require('./routes/communityResponder.routes'));
 app.use('/api/org', require('./routes/org.routes'));
 app.use('/api/incidents', require('./routes/incident.routes'));
-// app.use('/api/feed', require('./routes/feed.routes'));
-// app.use('/api/notifications', require('./routes/notification.routes'));
-// app.use('/api/devices', require('./routes/device.routes'));
-// app.use('/api/admin', require('./routes/admin.routes'));
-// app.use('/api/upload', require('./routes/upload.routes'));
+app.use('/api/feed', require('./routes/feed.routes'));
+app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/devices', require('./routes/device.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/upload', require('./routes/upload.routes'));
+app.use('/api/messages', require('./routes/message.routes'));
 
 // ── 404 handler ──
 app.use((req, res) => {
