@@ -13,7 +13,7 @@
     "safety",
     "emergency"
   ],
-  "author": "",
+  "author": "Abdul-Lateef",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.3",
