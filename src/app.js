@@ -45,12 +45,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════
-// ROUTES — will be mounted here in later batches
+// ROUTES
 // ══════════════════════════════════════════════════════
-// app.use('/api/auth', require('./routes/auth.routes'));
-// app.use('/api/users', require('./routes/user.routes'));
-// app.use('/api/sos', require('./routes/sos.routes'));
-// app.use('/api/emergency-contacts', require('./routes/emergencyContact.routes'));
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/sos', require('./routes/sos.routes'));
+app.use('/api/emergency-contacts', require('./routes/emergencyContact.routes'));
 // app.use('/api/organizations', require('./routes/organization.routes'));
 // app.use('/api/community-responders', require('./routes/communityResponder.routes'));
 // app.use('/api/feed', require('./routes/feed.routes'));
