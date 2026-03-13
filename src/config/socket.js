@@ -30,14 +30,12 @@ const initSocket = (httpServer) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Socket connected: ${socket.user.id}`);
+    // Attach userId for downstream handlers
+    socket.userId = socket.user.id;
 
-    // Auto-join user to their personal room
-    socket.join(`user:${socket.user.id}`);
-
-    socket.on('disconnect', (reason) => {
-      console.log(`🔌 Socket disconnected: ${socket.user.id} (${reason})`);
-    });
+    // Register all domain-specific socket event handlers
+    const registerSocketHandlers = require('../sockets');
+    registerSocketHandlers(io, socket);
   });
 
   return io;
