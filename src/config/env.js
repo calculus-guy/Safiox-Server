@@ -14,10 +14,9 @@ const validateEnv = () => {
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
     'CLOUDINARY_API_SECRET',
-    'EMAIL_HOST',
-    'EMAIL_PORT',
-    'EMAIL_USER',
-    'EMAIL_PASS',
+    'BREVO_API_KEY',
+    'EMAIL_FROM_ADDRESS',
+    'EMAIL_FROM_NAME',
     'GOOGLE_CLIENT_ID',
   ];
 

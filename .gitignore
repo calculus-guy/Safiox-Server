@@ -5,3 +5,9 @@ logs/
 coverage/
 .DS_Store
 Thumbs.db
+
+*.md
+*.txt
+
+seed-admin.js
+doc.txts

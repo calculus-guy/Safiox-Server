@@ -77,7 +77,7 @@ const userSchema = new mongoose.Schema(
       countdownDuration: { type: Number, default: 5, enum: [5, 10, 15] },
       silentMode: { type: Boolean, default: false },
       voiceTrigger: { type: Boolean, default: true },
-      voiceTriggerPhrase: { type: String, default: 'Hey SafeGuard' },
+      voiceTriggerPhrase: { type: String, default: 'Hey Safiox' },
       flashlight: { type: Boolean, default: true },
       communityRespondersEnabled: { type: Boolean, default: false },
     },

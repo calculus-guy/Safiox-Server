@@ -1,31 +1,29 @@
-const nodemailer = require('nodemailer');
+const SibApiV3Sdk = require('sib-api-v3-sdk');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT, 10) || 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const defaultClient = SibApiV3Sdk.ApiClient.instance;
+defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+
+const transactionalApi = new SibApiV3Sdk.TransactionalEmailsApi();
 
 /**
- * Send an email using the configured transporter
+ * Send an email using Brevo Transactional API
  * @param {Object} options - { to, subject, html, text }
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'Safiox'}" <${process.env.EMAIL_FROM || 'noreply@safiox.com'}>`,
-    to,
-    subject,
-    html,
-    text,
-  };
+  const email = new SibApiV3Sdk.SendSmtpEmail();
 
-  const info = await transporter.sendMail(mailOptions);
+  email.sender = {
+    name: process.env.EMAIL_FROM_NAME || 'Safiox',
+    email: process.env.EMAIL_FROM_ADDRESS || 'support@safiox.com',
+  };
+  email.to = [{ email: to }];
+  email.subject = subject;
+  if (html) email.htmlContent = html;
+  if (text) email.textContent = text;
+
+  const info = await transactionalApi.sendTransacEmail(email);
   console.log(`📧 Email sent: ${info.messageId}`);
   return info;
 };
 
-module.exports = { transporter, sendEmail };
+module.exports = { sendEmail };
