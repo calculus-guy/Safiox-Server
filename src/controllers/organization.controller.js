@@ -53,6 +53,35 @@ const getNearbyOrganizations = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get all verified organizations with optional type filter
+ * @route   GET /api/organizations/all
+ * @access  Public
+ */
+const getAllOrganizations = asyncHandler(async (req, res) => {
+  const { type, page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = { verificationStatus: 'verified' };
+  if (type && type !== 'all') query.type = type;
+
+  const [organizations, total] = await Promise.all([
+    Organization.find(query)
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .select('name type email phone address location operatingHours hotlineNumbers stats')
+      .sort({ name: 1 }),
+    Organization.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, organizations, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+/**
  * @desc    Get single organization detail
  * @route   GET /api/organizations/:id
  * @access  Public
@@ -83,4 +112,4 @@ function toRad(deg) {
   return deg * (Math.PI / 180);
 }
 
-module.exports = { getNearbyOrganizations, getOrganizationById };
+module.exports = { getNearbyOrganizations, getAllOrganizations, getOrganizationById };

@@ -5,6 +5,7 @@ const validate = require('../middleware/validate.middleware');
 const { nearbyOrgsQuery } = require('../validators/org.validator');
 
 // All public routes — no auth required
+router.get('/all', orgController.getAllOrganizations);
 router.get('/', validate(nearbyOrgsQuery, 'query'), orgController.getNearbyOrganizations);
 router.get('/:id', orgController.getOrganizationById);
 
