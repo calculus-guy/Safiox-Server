@@ -12,12 +12,14 @@ const getNearbyOrganizations = asyncHandler(async (req, res) => {
   const { type, lat, lng, radius, page, limit } = req.query;
   const skip = (page - 1) * limit;
 
+  const radiusInMeters = parseInt(radius, 10) || 5000;
+  const radiusInRadians = radiusInMeters / 6378100; // Earth's radius in meters
+
   const query = {
     verificationStatus: 'verified',
     location: {
-      $nearSphere: {
-        $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-        $maxDistance: parseInt(radius, 10) || 5000,
+      $geoWithin: {
+        $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
       },
     },
   };
@@ -34,15 +36,17 @@ const getNearbyOrganizations = asyncHandler(async (req, res) => {
     Organization.countDocuments(query),
   ]);
 
-  // Calculate approximate distance for each result
-  const orgsWithDistance = organizations.map((org) => {
-    const orgObj = org.toObject();
-    const [orgLng, orgLat] = org.location.coordinates;
-    const distance = calculateDistance(parseFloat(lat), parseFloat(lng), orgLat, orgLng);
-    orgObj.distance = distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`;
-    orgObj.distanceValue = distance;
-    return orgObj;
-  });
+  // Calculate approximate distance for each result and sort by closest
+  const orgsWithDistance = organizations
+    .map((org) => {
+      const orgObj = org.toObject();
+      const [orgLng, orgLat] = org.location.coordinates;
+      const distance = calculateDistance(parseFloat(lat), parseFloat(lng), orgLat, orgLng);
+      orgObj.distance = distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`;
+      orgObj.distanceValue = distance;
+      return orgObj;
+    })
+    .sort((a, b) => a.distanceValue - b.distanceValue);
 
   ApiResponse.paginated(res, orgsWithDistance, {
     page: parseInt(page, 10),
