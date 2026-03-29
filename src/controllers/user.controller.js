@@ -2,6 +2,8 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 const User = require('../models/User');
+const EmergencyContact = require('../models/EmergencyContact');
+const EmailService = require('../services/email.service');
 
 /**
  * @desc    Get current user profile
@@ -33,16 +35,33 @@ const updateProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Update safety status (safe/unsafe)
+ * @desc    Update safety status (safe/unsafe) — notifies emergency contacts if unsafe
  * @route   PUT /api/users/status
  * @access  Private
  */
 const updateStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+
   const user = await User.findByIdAndUpdate(
     req.user.id,
-    { status: req.body.status },
+    { status },
     { new: true }
   );
+
+  // If marking as unsafe, notify emergency contacts via email
+  if (status === 'unsafe') {
+    const contacts = await EmergencyContact.find({ userId: req.user.id });
+    for (const contact of contacts) {
+      if (contact.email) {
+        try {
+          await EmailService.sendUnsafeStatusEmail(contact, { userName: user.name });
+        } catch (err) {
+          console.error(`Failed to notify contact ${contact.name}:`, err.message);
+        }
+      }
+    }
+  }
+
   ApiResponse.ok(res, { status: user.status }, 'Status updated');
 });
 

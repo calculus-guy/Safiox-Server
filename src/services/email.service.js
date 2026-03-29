@@ -5,6 +5,31 @@ const { sendEmail } = require('../config/email');
  */
 class EmailService {
   /**
+   * Send unsafe status notification to an emergency contact.
+   */
+  static async sendUnsafeStatusEmail(contact, { userName }) {
+    await sendEmail({
+      to: contact.email,
+      subject: `⚠️ Safety Alert — ${userName} marked themselves as unsafe`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 30px; border: 2px solid #F59E0B; border-radius: 12px;">
+          <h2 style="color: #D97706;">⚠️ Safety Alert</h2>
+          <p style="color: #374151; font-size: 15px;">
+            Hi ${contact.name}, <strong>${userName}</strong> has marked themselves as <strong>unsafe</strong> on the Safiox app.
+          </p>
+          <p style="color: #374151; font-size: 15px;">
+            Please try to reach them and check if they are okay.
+          </p>
+          <p style="color: #6B7280; font-size: 13px; margin-top: 20px;">
+            This is an automated alert from Safiox Safety App.
+          </p>
+        </div>
+      `,
+      text: `Hi ${contact.name}, ${userName} has marked themselves as unsafe on Safiox. Please check on them.`,
+    });
+  }
+
+  /**
    * Send email verification link.
    */
   static async sendVerificationEmail(user, token) {
