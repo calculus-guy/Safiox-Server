@@ -19,6 +19,7 @@ router.use(authenticateToken);
 // ── Profile ──
 router.get('/profile', userController.getProfile);
 router.put('/profile', validate(updateProfileSchema), userController.updateProfile);
+router.get('/:userId/profile', userController.getUserProfile);
 
 // ── Safety status ──
 router.put('/status', validate(updateStatusSchema), userController.updateStatus);

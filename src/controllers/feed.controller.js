@@ -224,7 +224,7 @@ const forwardToAuthority = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Search posts
+ * @desc    Search posts and users
  * @route   GET /api/feed/search
  * @access  Private
  */
@@ -232,18 +232,22 @@ const searchPosts = asyncHandler(async (req, res) => {
   const { q, page = 1, limit = 20 } = req.query;
   const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-  const query = {
-    isRemoved: { $ne: true },
-    content: { $regex: q, $options: 'i' },
-  };
-
-  const [posts, total] = await Promise.all([
-    FeedPost.find(query)
+  const [posts, total, users] = await Promise.all([
+    FeedPost.find({
+      isRemoved: { $ne: true },
+      content: { $regex: q, $options: 'i' },
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10))
       .populate('authorId', 'name avatar'),
-    FeedPost.countDocuments(query),
+    FeedPost.countDocuments({
+      isRemoved: { $ne: true },
+      content: { $regex: q, $options: 'i' },
+    }),
+    User.find({ name: { $regex: q, $options: 'i' } })
+      .limit(10)
+      .select('name avatar status role'),
   ]);
 
   ApiResponse.paginated(res, posts, {
@@ -251,6 +255,7 @@ const searchPosts = asyncHandler(async (req, res) => {
     limit: parseInt(limit, 10),
     total,
     pages: Math.ceil(total / parseInt(limit, 10)),
+    users,
   });
 });
 

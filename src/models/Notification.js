@@ -10,18 +10,34 @@ const notificationSchema = new mongoose.Schema(
     type: {
       type: String,
       enum: [
+        // SOS
         'sos_alert',
         'sos_escalation',
         'sos_resolved',
+        'sos_cancelled',
+        // Incidents
+        'incident_new',
+        'incident_update',
+        'incident_dispatched',
+        'incident_on_scene',
+        'incident_resolved',
+        // Community
         'community_alert',
         'responder_accepted',
-        'incident_update',
         'broadcast',
+        // Feed
         'feed_like',
         'feed_comment',
         'feed_follow',
+        // Messaging
         'message',
+        // Safety
+        'unsafe_status',
         'safe_zone',
+        // Org
+        'org_approved',
+        'org_rejected',
+        // System
         'system',
       ],
       required: true,

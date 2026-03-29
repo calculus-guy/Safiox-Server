@@ -115,6 +115,15 @@ class SOSService {
     alert.escalatedTo = escalationRecords;
     await alert.save();
 
+    // In-app notification to the user confirming escalation
+    await Notification.create({
+      userId,
+      type: 'sos_escalation',
+      title: '🚨 SOS Escalated',
+      body: `Your emergency alert has been sent to ${contacts.length} contact(s).`,
+      data: { sosAlertId: alertId },
+    });
+
     // Emit real-time event
     if (io) {
       io.to(`sos:${alertId}`).emit('sos:escalated', {
@@ -126,7 +135,7 @@ class SOSService {
 
     // Push notification to user confirming escalation
     await PushService.sendToUser(userId, {
-      title: 'SOS Escalated',
+      title: '🚨 SOS Escalated',
       body: `Alert sent to ${contacts.length} emergency contact(s)`,
       data: { type: 'sos_escalation', sosAlertId: alertId },
     });
@@ -154,6 +163,15 @@ class SOSService {
 
     // Update user status back to safe
     await User.findByIdAndUpdate(userId, { status: 'safe' });
+
+    // In-app notification
+    await Notification.create({
+      userId,
+      type: 'sos_cancelled',
+      title: 'SOS Alert Cancelled',
+      body: 'Your SOS alert has been cancelled.',
+      data: { sosAlertId: alertId },
+    });
 
     // Emit real-time event
     if (io) {
@@ -194,6 +212,15 @@ class SOSService {
 
     // Update user status
     await User.findByIdAndUpdate(alert.userId, { status: 'safe' });
+
+    // In-app notification to user
+    await Notification.create({
+      userId: alert.userId,
+      type: 'sos_resolved',
+      title: '✅ SOS Alert Resolved',
+      body: 'Your SOS alert has been resolved. Stay safe.',
+      data: { sosAlertId: alertId },
+    });
 
     // Emit real-time event
     if (io) {

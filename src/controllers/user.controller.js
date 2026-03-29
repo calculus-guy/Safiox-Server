@@ -4,6 +4,9 @@ const ApiError = require('../utils/ApiError');
 const User = require('../models/User');
 const EmergencyContact = require('../models/EmergencyContact');
 const EmailService = require('../services/email.service');
+const Follow = require('../models/Follow');
+const FeedPost = require('../models/FeedPost');
+const Notification = require('../models/Notification');
 
 /**
  * @desc    Get current user profile
@@ -48,7 +51,7 @@ const updateStatus = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  // If marking as unsafe, notify emergency contacts via email
+  // If marking as unsafe, notify emergency contacts via email + in-app
   if (status === 'unsafe') {
     const contacts = await EmergencyContact.find({ userId: req.user.id });
     for (const contact of contacts) {
@@ -60,6 +63,14 @@ const updateStatus = asyncHandler(async (req, res) => {
         }
       }
     }
+    // Notify the user themselves that their contacts have been alerted
+    await Notification.create({
+      userId: req.user.id,
+      type: 'unsafe_status',
+      title: '⚠️ Emergency Contacts Notified',
+      body: 'Your emergency contacts have been notified that you marked yourself as unsafe.',
+      data: {},
+    });
   }
 
   ApiResponse.ok(res, { status: user.status }, 'Status updated');
@@ -217,9 +228,46 @@ const removeDeviceToken = asyncHandler(async (req, res) => {
   ApiResponse.ok(res, null, 'Device token removed');
 });
 
+/**
+ * @desc    Get public profile of any user (for viewing from feed)
+ * @route   GET /api/users/:userId/profile
+ * @access  Private
+ */
+const getUserProfile = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  const user = await User.findById(userId).select('name avatar status role createdAt');
+  if (!user) throw ApiError.notFound('User not found');
+
+  const [followerCount, followingCount, posts, isFollowing] = await Promise.all([
+    Follow.countDocuments({ followingId: userId }),
+    Follow.countDocuments({ followerId: userId }),
+    FeedPost.find({ authorId: userId, isRemoved: { $ne: true } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('content media likes commentCount createdAt'),
+    Follow.exists({ followerId: req.user.id, followingId: userId }),
+  ]);
+
+  ApiResponse.ok(res, {
+    user: {
+      _id: user._id,
+      name: user.name,
+      avatar: user.avatar,
+      status: user.status,
+      role: user.role,
+      followerCount,
+      followingCount,
+      isFollowing: !!isFollowing,
+      posts,
+    },
+  });
+});
+
 module.exports = {
   getProfile,
   updateProfile,
+  getUserProfile,
   updateStatus,
   getSettings,
   updateSettings,

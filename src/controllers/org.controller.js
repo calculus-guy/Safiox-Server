@@ -8,6 +8,23 @@ const FleetUnit = require('../models/FleetUnit');
 const Broadcast = require('../models/Broadcast');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const PushService = require('../services/push.service');
+
+// ── Helper: notify user about their incident update ──
+const notifyIncidentUser = async (incident, title, body, io) => {
+  if (!incident.userId) return;
+  await Notification.create({
+    userId: incident.userId,
+    type: 'incident_update',
+    title,
+    body,
+    data: { incidentId: incident._id, status: incident.status },
+  });
+  await PushService.sendToUser(incident.userId.toString(), { title, body, data: { type: 'incident_update', incidentId: incident._id.toString() } });
+  if (io) {
+    io.to(`user:${incident.userId}`).emit('incident:update', { incidentId: incident._id, status: incident.status, title, body });
+  }
+};
 
 // ── Helper: Get org for current user ──
 const getOrgForUser = async (userId) => {
@@ -106,7 +123,19 @@ const updateIncidentStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  // Emit real-time event
+  // Notify the user who reported the incident
+  const notificationMap = {
+    'Responding': { title: '🚑 Help is on the way', body: `${org.name} is responding to your incident report.` },
+    'On-Scene': { title: '📍 Responders on scene', body: `${org.name} has arrived at the scene of your incident.` },
+    'Resolved': { title: '✅ Incident Resolved', body: `Your incident has been resolved by ${org.name}.` },
+  };
+  const notifData = notificationMap[status];
+  if (notifData) {
+    const io = req.app.get('io');
+    await notifyIncidentUser(incident, notifData.title, notifData.body, io);
+  }
+
+  // Emit real-time event to org
   const io = req.app.get('io');
   if (io) {
     io.to(`org:${org._id}`).emit('incident:status-update', {
@@ -154,8 +183,16 @@ const dispatchUnit = asyncHandler(async (req, res) => {
 
   await incident.save();
 
-  // Emit real-time event
+  // Notify the user who reported the incident
   const io = req.app.get('io');
+  await notifyIncidentUser(
+    incident,
+    '🚑 Unit Dispatched',
+    `${org.name} has dispatched ${unit.unitName} to your incident.`,
+    io
+  );
+
+  // Emit real-time event to org
   if (io) {
     io.to(`org:${org._id}`).emit('incident:dispatched', {
       incidentId: incident._id,
@@ -435,7 +472,6 @@ const sendBroadcast = asyncHandler(async (req, res) => {
   }
 
   // Push notification
-  const PushService = require('../services/push.service');
   await PushService.sendToMultiple(userIds, {
     title: `📢 ${org.name}`,
     body: message,

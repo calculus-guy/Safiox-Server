@@ -171,6 +171,15 @@ const approveOrganization = asyncHandler(async (req, res) => {
     console.error('Failed to send org approval email:', err.message);
   }
 
+  // In-app notification to org admin
+  await Notification.create({
+    userId: org.userId,
+    type: 'org_approved',
+    title: '✅ Organization Verified',
+    body: `${org.name} has been verified. You can now access all organization features.`,
+    data: { organizationId: org._id },
+  });
+
   ApiResponse.ok(res, { organization: org }, 'Organization approved');
 });
 
@@ -187,6 +196,16 @@ const rejectOrganization = asyncHandler(async (req, res) => {
     { new: true }
   );
   if (!org) throw ApiError.notFound('Organization not found');
+
+  // In-app notification to org admin
+  await Notification.create({
+    userId: org.userId,
+    type: 'org_rejected',
+    title: '❌ Organization Verification Failed',
+    body: reason ? `Your organization was not verified. Reason: ${reason}` : 'Your organization verification was unsuccessful. Please contact support.',
+    data: { organizationId: org._id },
+  });
+
   ApiResponse.ok(res, { organization: org }, 'Organization rejected');
 });
 
