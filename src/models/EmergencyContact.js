@@ -14,8 +14,13 @@ const emergencyContactSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: [true, 'Contact phone number is required'],
       trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
     },
     relation: {
       type: String,

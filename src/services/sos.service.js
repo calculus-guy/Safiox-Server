@@ -91,17 +91,19 @@ class SOSService {
         delivered: true,
       });
 
-      // Attempt email (contacts may not have email)
-      try {
-        await EmailService.sendSOSEscalationEmail(contact, {
-          userName: user.name,
-          trackingToken: alert.trackingToken,
-          triggeredAt: alert.createdAt,
-          latitude: alert.location.coordinates[1],
-          longitude: alert.location.coordinates[0],
-        });
-      } catch (err) {
-        console.error(`Failed to send escalation email to ${contact.name}:`, err.message);
+      // Attempt email if contact has an email address
+      if (contact.email) {
+        try {
+          await EmailService.sendSOSEscalationEmail(contact, {
+            userName: user.name,
+            trackingToken: alert.trackingToken,
+            triggeredAt: alert.createdAt,
+            latitude: alert.location.coordinates[1],
+            longitude: alert.location.coordinates[0],
+          });
+        } catch (err) {
+          console.error(`Failed to send escalation email to ${contact.name}:`, err.message);
+        }
       }
     }
 
@@ -164,10 +166,12 @@ class SOSService {
       const user = await User.findById(userId);
       const contacts = await EmergencyContact.find({ userId });
       for (const contact of contacts) {
-        try {
-          await EmailService.sendSOSResolvedEmail(contact, { userName: user.name });
-        } catch (err) {
-          console.error(`Failed to send SOS resolved email:`, err.message);
+        if (contact.email) {
+          try {
+            await EmailService.sendSOSResolvedEmail(contact, { userName: user.name });
+          } catch (err) {
+            console.error(`Failed to send SOS resolved email:`, err.message);
+          }
         }
       }
     }
@@ -201,10 +205,12 @@ class SOSService {
       const user = await User.findById(alert.userId);
       const contacts = await EmergencyContact.find({ userId: alert.userId });
       for (const contact of contacts) {
-        try {
-          await EmailService.sendSOSResolvedEmail(contact, { userName: user.name });
-        } catch (err) {
-          console.error(`Failed to send SOS resolved email:`, err.message);
+        if (contact.email) {
+          try {
+            await EmailService.sendSOSResolvedEmail(contact, { userName: user.name });
+          } catch (err) {
+            console.error(`Failed to send SOS resolved email:`, err.message);
+          }
         }
       }
     }
