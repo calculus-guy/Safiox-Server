@@ -3,7 +3,7 @@ const ApiResponse = require('../utils/ApiResponse');
 const AuthService = require('../services/auth.service');
 
 /**
- * @desc    Register individual user
+ * @desc    Register personal user
  * @route   POST /api/auth/register
  * @access  Public
  */

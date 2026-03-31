@@ -25,7 +25,7 @@ class AuthService {
       email,
       phone,
       password,
-      role: 'individual',
+      role: 'personal',
     });
 
     // Generate email verification token
@@ -235,7 +235,7 @@ class AuthService {
         phone: '',
         googleId,
         avatar: picture || '',
-        role: 'individual',
+        role: 'personal',
         isEmailVerified: true,
       });
     }

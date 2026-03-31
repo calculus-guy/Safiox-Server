@@ -29,8 +29,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['individual', 'organization', 'admin'],
-      default: 'individual',
+      enum: ['personal', 'organization', 'admin'],
+      default: 'personal',
     },
     avatar: {
       type: String, // Cloudinary URL

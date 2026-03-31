@@ -322,7 +322,7 @@ const getAnalytics = asyncHandler(async (req, res) => {
     activeSOS,
     resolvedSOS,
   ] = await Promise.all([
-    User.countDocuments({ role: 'individual' }),
+    User.countDocuments({ role: 'personal' }),
     Organization.countDocuments(),
     Organization.countDocuments({ verificationStatus: 'verified' }),
     Organization.countDocuments({ verificationStatus: 'pending' }),

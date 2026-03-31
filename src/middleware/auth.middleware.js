@@ -43,7 +43,7 @@ const authenticateToken = async (req, res, next) => {
 
 /**
  * Authorize by role(s).
- * Usage: authorizeRole('admin') or authorizeRole('individual', 'admin')
+ * Usage: authorizeRole('admin') or authorizeRole('personal', 'admin')
  */
 const authorizeRole = (...roles) => {
   return (req, res, next) => {

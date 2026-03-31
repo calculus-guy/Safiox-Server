@@ -446,7 +446,7 @@ const sendBroadcast = asyncHandler(async (req, res) => {
       },
     },
     _id: { $ne: req.user.id },
-    role: 'individual',
+    role: 'personal',
   }).select('_id');
 
   const userIds = nearbyUsers.map((u) => u._id);

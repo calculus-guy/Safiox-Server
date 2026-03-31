@@ -15,7 +15,7 @@ const registerSchema = Joi.object({
       'string.min': 'Password must be at least 8 characters',
       'string.pattern.name': 'Password must contain at least one {#name}',
     }),
-  role: Joi.string().valid('individual').default('individual'),
+  role: Joi.string().valid('personal').default('personal'),
 });
 
 const registerOrgSchema = Joi.object({
@@ -64,13 +64,13 @@ const loginSchema = Joi.object({
     .messages({ 'any.required': 'Email is required' }),
   password: Joi.string().required()
     .messages({ 'any.required': 'Password is required' }),
-  role: Joi.string().valid('individual', 'organization').default('individual'),
+  role: Joi.string().valid('personal', 'organization').default('personal'),
 });
 
 const googleAuthSchema = Joi.object({
   idToken: Joi.string().required()
     .messages({ 'any.required': 'Google ID token is required' }),
-  role: Joi.string().valid('individual').default('individual'),
+  role: Joi.string().valid('personal').default('personal'),
 });
 
 const forgotPasswordSchema = Joi.object({
