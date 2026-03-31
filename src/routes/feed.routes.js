@@ -14,6 +14,12 @@ const {
 
 router.use(authenticateToken);
 
+// ── Follow (must be before /:id to avoid route conflicts) ──
+router.get('/followers', feedController.getFollowers);
+router.get('/following', feedController.getFollowing);
+router.post('/follow/:userId', feedController.followUser);
+router.delete('/follow/:userId', feedController.unfollowUser);
+
 // ── Feed ──
 router.get('/', validate(feedQuerySchema, 'query'), feedController.getFeed);
 router.get('/search', validate(searchQuerySchema, 'query'), feedController.searchPosts);
@@ -31,11 +37,5 @@ router.post('/:id/forward', validate(forwardToAuthoritySchema), feedController.f
 router.get('/:id/comments', feedController.getComments);
 router.post('/:id/comments', validate(createCommentSchema), feedController.addComment);
 router.delete('/:postId/comments/:commentId', feedController.deleteComment);
-
-// ── Follow ──
-router.get('/followers', feedController.getFollowers);
-router.get('/following', feedController.getFollowing);
-router.post('/follow/:userId', feedController.followUser);
-router.delete('/follow/:userId', feedController.unfollowUser);
 
 module.exports = router;
