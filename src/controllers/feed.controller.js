@@ -37,7 +37,7 @@ const getFeed = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10))
-      .populate('authorId', 'username avatar')
+      .populate('authorId', 'username name avatar')
       .lean(),
     FeedPost.countDocuments(query),
   ]);
@@ -82,7 +82,7 @@ const createPost = asyncHandler(async (req, res) => {
   }
 
   const post = await FeedPost.create(postData);
-  const populated = await FeedPost.findById(post._id).populate('authorId', 'username avatar');
+  const populated = await FeedPost.findById(post._id).populate('authorId', 'username name avatar');
 
   ApiResponse.created(res, { post: populated }, 'Post created');
 });
@@ -94,7 +94,7 @@ const createPost = asyncHandler(async (req, res) => {
  */
 const getPostById = asyncHandler(async (req, res) => {
   const post = await FeedPost.findById(req.params.id)
-    .populate('authorId', 'username avatar');
+    .populate('authorId', 'username name avatar');
   if (!post || post.isRemoved) throw ApiError.notFound('Post not found');
   ApiResponse.ok(res, { post });
 });
@@ -240,7 +240,7 @@ const searchPosts = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10))
-      .populate('authorId', 'username avatar'),
+      .populate('authorId', 'username name avatar'),
     FeedPost.countDocuments({
       isRemoved: { $ne: true },
       content: { $regex: q, $options: 'i' },
@@ -278,7 +278,7 @@ const getComments = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('authorId', 'username avatar'),
+      .populate('authorId', 'username name avatar'),
   ]);
 
   ApiResponse.paginated(res, comments, { page, limit, total, pages: Math.ceil(total / limit) });
@@ -315,7 +315,7 @@ const addComment = asyncHandler(async (req, res) => {
     });
   }
 
-  const populated = await Comment.findById(comment._id).populate('authorId', 'username avatar');
+  const populated = await Comment.findById(comment._id).populate('authorId', 'username name avatar');
   ApiResponse.created(res, { comment: populated }, 'Comment added');
 });
 
