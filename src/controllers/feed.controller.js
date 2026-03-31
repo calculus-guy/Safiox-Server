@@ -394,7 +394,7 @@ const unfollowUser = asyncHandler(async (req, res) => {
  */
 const getFollowers = asyncHandler(async (req, res) => {
   const follows = await Follow.find({ followingId: req.user.id })
-    .populate('followerId', 'username avatar');
+    .populate('followerId', 'username name avatar');
   const followers = follows.map((f) => f.followerId);
   ApiResponse.ok(res, { followers, count: followers.length });
 });
@@ -406,7 +406,7 @@ const getFollowers = asyncHandler(async (req, res) => {
  */
 const getFollowing = asyncHandler(async (req, res) => {
   const follows = await Follow.find({ followerId: req.user.id })
-    .populate('followingId', 'username avatar');
+    .populate('followingId', 'username name avatar');
   const following = follows.map((f) => f.followingId);
   ApiResponse.ok(res, { following, count: following.length });
 });
