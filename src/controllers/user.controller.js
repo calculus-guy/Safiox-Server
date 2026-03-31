@@ -16,6 +16,14 @@ const Notification = require('../models/Notification');
 const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) throw ApiError.notFound('User not found');
+
+  // Backfill username for old accounts that don't have one yet
+  if (!user.username) {
+    const generateUsername = require('../utils/generateUsername');
+    user.username = await generateUsername(user.name);
+    await user.save();
+  }
+
   ApiResponse.ok(res, { user: user.toSafeObject() });
 });
 
