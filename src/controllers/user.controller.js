@@ -236,7 +236,7 @@ const removeDeviceToken = asyncHandler(async (req, res) => {
 const getUserProfile = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
-  const user = await User.findById(userId).select('name avatar status role createdAt');
+  const user = await User.findById(userId).select('username avatar status role createdAt');
   if (!user) throw ApiError.notFound('User not found');
 
   const [followerCount, followingCount, posts, isFollowing] = await Promise.all([
@@ -252,7 +252,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
   ApiResponse.ok(res, {
     user: {
       _id: user._id,
-      name: user.name,
+      username: user.username,
       avatar: user.avatar,
       status: user.status,
       role: user.role,
@@ -264,9 +264,35 @@ const getUserProfile = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Update username (must be unique)
+ * @route   PUT /api/users/username
+ * @access  Private
+ */
+const updateUsername = asyncHandler(async (req, res) => {
+  const { username } = req.body;
+  if (!username) throw ApiError.badRequest('Username is required');
+
+  const clean = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+  if (clean.length < 3) throw ApiError.badRequest('Username must be at least 3 characters');
+  if (clean.length > 30) throw ApiError.badRequest('Username cannot exceed 30 characters');
+
+  const existing = await User.findOne({ username: clean, _id: { $ne: req.user.id } });
+  if (existing) throw ApiError.conflict('Username is already taken');
+
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { username: clean },
+    { new: true }
+  );
+
+  ApiResponse.ok(res, { username: user.username }, 'Username updated');
+});
+
 module.exports = {
   getProfile,
   updateProfile,
+  updateUsername,
   getUserProfile,
   updateStatus,
   getSettings,

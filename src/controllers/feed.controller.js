@@ -37,7 +37,7 @@ const getFeed = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10))
-      .populate('authorId', 'name avatar')
+      .populate('authorId', 'username avatar')
       .lean(),
     FeedPost.countDocuments(query),
   ]);
@@ -82,7 +82,7 @@ const createPost = asyncHandler(async (req, res) => {
   }
 
   const post = await FeedPost.create(postData);
-  const populated = await FeedPost.findById(post._id).populate('authorId', 'name avatar');
+  const populated = await FeedPost.findById(post._id).populate('authorId', 'username avatar');
 
   ApiResponse.created(res, { post: populated }, 'Post created');
 });
@@ -94,7 +94,7 @@ const createPost = asyncHandler(async (req, res) => {
  */
 const getPostById = asyncHandler(async (req, res) => {
   const post = await FeedPost.findById(req.params.id)
-    .populate('authorId', 'name avatar');
+    .populate('authorId', 'username avatar');
   if (!post || post.isRemoved) throw ApiError.notFound('Post not found');
   ApiResponse.ok(res, { post });
 });
@@ -149,12 +149,12 @@ const likePost = asyncHandler(async (req, res) => {
     post.likes.push(req.user.id);
     // Notify author (don't notify self)
     if (post.authorId.toString() !== req.user.id) {
-      const user = await User.findById(req.user.id).select('name');
+      const user = await User.findById(req.user.id).select('username');
       await Notification.create({
         userId: post.authorId,
         type: 'feed_like',
         title: 'New Like',
-        body: `${user.name} liked your post`,
+        body: `${user.username} liked your post`,
         data: { postId: post._id },
       });
     }
@@ -240,14 +240,14 @@ const searchPosts = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit, 10))
-      .populate('authorId', 'name avatar'),
+      .populate('authorId', 'username avatar'),
     FeedPost.countDocuments({
       isRemoved: { $ne: true },
       content: { $regex: q, $options: 'i' },
     }),
-    User.find({ name: { $regex: q, $options: 'i' } })
+    User.find({ username: { $regex: q, $options: 'i' } })
       .limit(10)
-      .select('name avatar status role'),
+      .select('username avatar status role'),
   ]);
 
   ApiResponse.paginated(res, posts, {
@@ -278,8 +278,7 @@ const getComments = asyncHandler(async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('authorId', 'name avatar'),
-    Comment.countDocuments({ postId: req.params.id, isRemoved: { $ne: true } }),
+      .populate('authorId', 'username avatar'),
   ]);
 
   ApiResponse.paginated(res, comments, { page, limit, total, pages: Math.ceil(total / limit) });
@@ -306,17 +305,17 @@ const addComment = asyncHandler(async (req, res) => {
 
   // Notify post author
   if (post.authorId.toString() !== req.user.id) {
-    const user = await User.findById(req.user.id).select('name');
+    const user = await User.findById(req.user.id).select('username');
     await Notification.create({
       userId: post.authorId,
       type: 'feed_comment',
       title: 'New Comment',
-      body: `${user.name} commented on your post`,
+      body: `${user.username} commented on your post`,
       data: { postId: post._id },
     });
   }
 
-  const populated = await Comment.findById(comment._id).populate('authorId', 'name avatar');
+  const populated = await Comment.findById(comment._id).populate('authorId', 'username avatar');
   ApiResponse.created(res, { comment: populated }, 'Comment added');
 });
 
@@ -358,13 +357,12 @@ const followUser = asyncHandler(async (req, res) => {
 
   try {
     await Follow.create({ followerId: req.user.id, followingId: targetUserId });
-    // Notify
-    const user = await User.findById(req.user.id).select('name');
+    const user = await User.findById(req.user.id).select('username');
     await Notification.create({
       userId: targetUserId,
       type: 'feed_follow',
       title: 'New Follower',
-      body: `${user.name} started following you`,
+      body: `${user.username} started following you`,
       data: { userId: req.user.id },
     });
   } catch (err) {
@@ -396,7 +394,7 @@ const unfollowUser = asyncHandler(async (req, res) => {
  */
 const getFollowers = asyncHandler(async (req, res) => {
   const follows = await Follow.find({ followingId: req.user.id })
-    .populate('followerId', 'name avatar');
+    .populate('followerId', 'username avatar');
   const followers = follows.map((f) => f.followerId);
   ApiResponse.ok(res, { followers, count: followers.length });
 });
@@ -408,7 +406,7 @@ const getFollowers = asyncHandler(async (req, res) => {
  */
 const getFollowing = asyncHandler(async (req, res) => {
   const follows = await Follow.find({ followerId: req.user.id })
-    .populate('followingId', 'name avatar');
+    .populate('followingId', 'username avatar');
   const following = follows.map((f) => f.followingId);
   ApiResponse.ok(res, { following, count: following.length });
 });

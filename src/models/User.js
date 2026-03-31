@@ -9,6 +9,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, 'Name cannot exceed 100 characters'],
     },
+    username: {
+      type: String,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: [30, 'Username cannot exceed 30 characters'],
+    },
     email: {
       type: String,
       required: [true, 'Email is required'],
@@ -130,6 +137,7 @@ const userSchema = new mongoose.Schema(
 // ── Indexes (email and googleId already have unique: true on the field) ──
 userSchema.index({ lastLocation: '2dsphere' });
 userSchema.index({ role: 1 });
+userSchema.index({ username: 1 });
 
 // ── Pre-save hook: hash password ──
 userSchema.pre('save', async function () {

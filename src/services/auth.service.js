@@ -5,6 +5,7 @@ const Organization = require('../models/Organization');
 const ApiError = require('../utils/ApiError');
 const { generateTokenPair } = require('../utils/generateToken');
 const EmailService = require('./email.service');
+const generateUsername = require('../utils/generateUsername');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -26,6 +27,7 @@ class AuthService {
       phone,
       password,
       role: 'personal',
+      username: await generateUsername(name),
     });
 
     // Generate email verification token
@@ -237,6 +239,7 @@ class AuthService {
         avatar: picture || '',
         role: 'personal',
         isEmailVerified: true,
+        username: await generateUsername(name || email.split('@')[0]),
       });
     }
 
