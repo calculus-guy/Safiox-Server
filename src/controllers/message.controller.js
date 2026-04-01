@@ -1,6 +1,7 @@
 const asyncHandler = require('../utils/asyncHandler');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
+const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
@@ -18,11 +19,13 @@ const buildConversationKey = (id1, id2) => {
  * @access  Private
  */
 const getConversations = asyncHandler(async (req, res) => {
+  const currentUserId = new mongoose.Types.ObjectId(req.user.id);
+
   // Get all unique conversation keys that involve this user
   const conversations = await Message.aggregate([
     {
       $match: {
-        $or: [{ senderId: req.user.id }, { receiverId: req.user.id }],
+        $or: [{ senderId: currentUserId }, { receiverId: currentUserId }],
       },
     },
     {
@@ -37,7 +40,7 @@ const getConversations = asyncHandler(async (req, res) => {
             $cond: [
               {
                 $and: [
-                  { $eq: ['$receiverId', req.user.id] },
+                  { $eq: ['$receiverId', currentUserId] },
                   { $eq: ['$read', false] },
                 ],
               },
