@@ -1,11 +1,11 @@
-const crypto = require('crypto');
-const { OAuth2Client } = require('google-auth-library');
-const User = require('../models/User');
-const Organization = require('../models/Organization');
-const ApiError = require('../utils/ApiError');
-const { generateTokenPair } = require('../utils/generateToken');
-const EmailService = require('./email.service');
-const generateUsername = require('../utils/generateUsername');
+const crypto = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
+const User = require("../models/User");
+const Organization = require("../models/Organization");
+const ApiError = require("../utils/ApiError");
+const { generateTokenPair } = require("../utils/generateToken");
+const EmailService = require("./email.service");
+const generateUsername = require("../utils/generateUsername");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -17,7 +17,7 @@ class AuthService {
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw ApiError.conflict('An account with this email already exists');
+      throw ApiError.conflict("An account with this email already exists");
     }
 
     // Create user
@@ -26,16 +26,16 @@ class AuthService {
       email,
       phone,
       password,
-      role: 'personal',
+      role: "personal",
       username: await generateUsername(name),
     });
 
     // Generate email verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationToken = crypto.randomBytes(32).toString("hex");
     user.emailVerificationToken = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(verificationToken)
-      .digest('hex');
+      .digest("hex");
     user.emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     await user.save();
 
@@ -43,7 +43,7 @@ class AuthService {
     try {
       await EmailService.sendVerificationEmail(user, verificationToken);
     } catch (err) {
-      console.error('Failed to send verification email:', err.message);
+      console.error("Failed to send verification email:", err.message);
     }
 
     // Generate tokens
@@ -61,12 +61,23 @@ class AuthService {
    * Register an organization (multi-step wizard).
    */
   static async registerOrganization(data, files) {
-    const { name, email, phone, address, orgType, password, branch, fleet, staffCount, verificationCode } = data;
+    const {
+      name,
+      email,
+      phone,
+      address,
+      orgType,
+      password,
+      branch,
+      fleet,
+      staffCount,
+      verificationCode,
+    } = data;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw ApiError.conflict('An account with this email already exists');
+      throw ApiError.conflict("An account with this email already exists");
     }
 
     // Create the user account for the org admin
@@ -75,16 +86,41 @@ class AuthService {
       email,
       phone,
       password,
-      role: 'organization',
+      role: "organization",
     });
 
-    // Build verification document URLs (from multer files → Cloudinary)
-    const verificationDocuments = files
-      ? files.map((f) => f.cloudinaryUrl || f.path || '')
-      : [];
+    // Upload verification documents to Cloudinary from multer memory buffers
+    const cloudinary = require("../config/cloudinary");
+    const { Readable } = require("stream");
+    const verificationDocuments = [];
+
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: "safiox/org-documents", resource_type: "auto" },
+              (error, result) => {
+                if (error) return reject(error);
+                resolve(result);
+              },
+            );
+            const readable = new Readable();
+            readable.push(file.buffer);
+            readable.push(null);
+            readable.pipe(stream);
+          });
+          verificationDocuments.push(uploadResult.secure_url);
+        } catch (uploadErr) {
+          console.error("Failed to upload org document:", uploadErr.message);
+        }
+      }
+    }
 
     // Generate verification code if not provided
-    const generatedCode = verificationCode || `VER-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const generatedCode =
+      verificationCode ||
+      `VER-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
 
     // Create organization document
     const org = await Organization.create({
@@ -94,11 +130,11 @@ class AuthService {
       phone,
       address,
       type: orgType,
-      verificationStatus: 'pending',
+      verificationStatus: "pending",
       verificationDocuments,
       verificationCode: generatedCode,
       location: {
-        type: 'Point',
+        type: "Point",
         coordinates: [
           parseFloat(branch.longitude) || 0,
           parseFloat(branch.latitude) || 0,
@@ -111,7 +147,7 @@ class AuthService {
           name: branch.name,
           address: branch.address,
           location: {
-            type: 'Point',
+            type: "Point",
             coordinates: [
               parseFloat(branch.longitude) || 0,
               parseFloat(branch.latitude) || 0,
@@ -134,7 +170,7 @@ class AuthService {
     try {
       await EmailService.sendOrgRegistrationEmail(org);
     } catch (err) {
-      console.error('Failed to send org registration email:', err.message);
+      console.error("Failed to send org registration email:", err.message);
     }
 
     return {
@@ -149,24 +185,30 @@ class AuthService {
    */
   static async login({ email, password, role }) {
     // Find user with password field
-    const user = await User.findOne({ email }).select('+password +refreshToken');
+    const user = await User.findOne({ email }).select(
+      "+password +refreshToken",
+    );
     if (!user) {
-      throw ApiError.unauthorized('Invalid email or password');
+      throw ApiError.unauthorized("Invalid email or password");
     }
 
     // Check if account is deactivated
     if (user.isDeactivated) {
-      throw ApiError.unauthorized('Account has been deactivated. Please contact support.');
+      throw ApiError.unauthorized(
+        "Account has been deactivated. Please contact support.",
+      );
     }
 
     // Check login lockout
     if (user.isLocked()) {
-      throw ApiError.tooMany('Account temporarily locked due to too many failed attempts. Try again in 30 minutes.');
+      throw ApiError.tooMany(
+        "Account temporarily locked due to too many failed attempts. Try again in 30 minutes.",
+      );
     }
 
     // Verify role matches
-    if (role && user.role !== role && user.role !== 'admin') {
-      throw ApiError.unauthorized('Invalid credentials for this account type');
+    if (role && user.role !== role && user.role !== "admin") {
+      throw ApiError.unauthorized("Invalid credentials for this account type");
     }
 
     // Compare password
@@ -178,7 +220,7 @@ class AuthService {
         user.lockUntil = Date.now() + 30 * 60 * 1000; // 30 min
       }
       await user.save();
-      throw ApiError.unauthorized('Invalid email or password');
+      throw ApiError.unauthorized("Invalid email or password");
     }
 
     // Reset failed attempts on successful login
@@ -192,7 +234,7 @@ class AuthService {
 
     // For organization users, also fetch org data
     let organization = null;
-    if (user.role === 'organization') {
+    if (user.role === "organization") {
       organization = await Organization.findOne({ userId: user._id });
     }
 
@@ -232,20 +274,20 @@ class AuthService {
     } else {
       // Create new user
       user = await User.create({
-        name: name || email.split('@')[0],
+        name: name || email.split("@")[0],
         email,
-        phone: '',
+        phone: "",
         googleId,
-        avatar: picture || '',
-        role: 'personal',
+        avatar: picture || "",
+        role: "personal",
         isEmailVerified: true,
-        username: await generateUsername(name || email.split('@')[0]),
+        username: await generateUsername(name || email.split("@")[0]),
       });
     }
 
     // Check deactivation
     if (user.isDeactivated) {
-      throw ApiError.unauthorized('Account has been deactivated');
+      throw ApiError.unauthorized("Account has been deactivated");
     }
 
     // Generate tokens
@@ -264,24 +306,24 @@ class AuthService {
    * Refresh access token.
    */
   static async refreshToken(refreshToken) {
-    const jwt = require('jsonwebtoken');
+    const jwt = require("jsonwebtoken");
 
     // Verify refresh token
     let decoded;
     try {
       decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     } catch (err) {
-      throw ApiError.unauthorized('Invalid or expired refresh token');
+      throw ApiError.unauthorized("Invalid or expired refresh token");
     }
 
     // Find user and verify stored refresh token matches
-    const user = await User.findById(decoded.id).select('+refreshToken');
+    const user = await User.findById(decoded.id).select("+refreshToken");
     if (!user || user.refreshToken !== refreshToken) {
-      throw ApiError.unauthorized('Invalid refresh token');
+      throw ApiError.unauthorized("Invalid refresh token");
     }
 
     if (user.isDeactivated) {
-      throw ApiError.unauthorized('Account has been deactivated');
+      throw ApiError.unauthorized("Account has been deactivated");
     }
 
     // Rotate tokens
@@ -299,14 +341,17 @@ class AuthService {
     const user = await User.findOne({ email });
     if (!user) {
       // Don't reveal that the user doesn't exist
-      return { message: 'If an account with that email exists, a reset link has been sent.' };
+      return {
+        message:
+          "If an account with that email exists, a reset link has been sent.",
+      };
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     user.passwordResetToken = crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(resetToken)
-      .digest('hex');
+      .digest("hex");
     user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
     await user.save();
 
@@ -316,28 +361,28 @@ class AuthService {
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save();
-      throw ApiError.internal('Failed to send reset email. Please try again.');
+      throw ApiError.internal("Failed to send reset email. Please try again.");
     }
 
-    return { message: 'If an account with that email exists, a reset link has been sent.' };
+    return {
+      message:
+        "If an account with that email exists, a reset link has been sent.",
+    };
   }
 
   /**
    * Reset password with token.
    */
   static async resetPassword(token, newPassword) {
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
-    }).select('+password');
+    }).select("+password");
 
     if (!user) {
-      throw ApiError.badRequest('Invalid or expired reset token');
+      throw ApiError.badRequest("Invalid or expired reset token");
     }
 
     user.password = newPassword;
@@ -347,17 +392,14 @@ class AuthService {
     user.lockUntil = undefined;
     await user.save();
 
-    return { message: 'Password reset successfully' };
+    return { message: "Password reset successfully" };
   }
 
   /**
    * Verify email with token.
    */
   static async verifyEmail(token) {
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       emailVerificationToken: hashedToken,
@@ -365,7 +407,7 @@ class AuthService {
     });
 
     if (!user) {
-      throw ApiError.badRequest('Invalid or expired verification token');
+      throw ApiError.badRequest("Invalid or expired verification token");
     }
 
     user.isEmailVerified = true;
@@ -373,7 +415,7 @@ class AuthService {
     user.emailVerificationExpires = undefined;
     await user.save();
 
-    return { message: 'Email verified successfully' };
+    return { message: "Email verified successfully" };
   }
 
   /**
@@ -381,7 +423,7 @@ class AuthService {
    */
   static async logout(userId) {
     await User.findByIdAndUpdate(userId, { refreshToken: null });
-    return { message: 'Logged out successfully' };
+    return { message: "Logged out successfully" };
   }
 }
 

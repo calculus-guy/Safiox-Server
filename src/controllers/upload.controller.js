@@ -1,6 +1,6 @@
-const asyncHandler = require('../utils/asyncHandler');
-const ApiResponse = require('../utils/ApiResponse');
-const cloudinary = require('../config/cloudinary');
+const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/ApiResponse");
+const cloudinary = require("../config/cloudinary");
 
 /**
  * @desc    Get signed upload parameters for direct Cloudinary upload.
@@ -9,27 +9,35 @@ const cloudinary = require('../config/cloudinary');
  * @access  Private
  */
 const getUploadSignature = asyncHandler(async (req, res) => {
-  const { folder = 'safiox/general', upload_preset } = req.query;
+  const { folder = "safiox/general" } = req.query;
 
   const timestamp = Math.round(new Date().getTime() / 1000);
 
+  // IMPORTANT: paramsToSign must contain EXACTLY the same params
+  // that the frontend will send in the FormData body (excluding file,
+  // api_key, resource_type, and signature itself).
+  // Cloudinary validates the signature against all non-excluded params.
   const paramsToSign = {
-    timestamp,
     folder,
+    timestamp,
   };
 
   const signature = cloudinary.utils.api_sign_request(
     paramsToSign,
-    process.env.CLOUDINARY_API_SECRET
+    process.env.CLOUDINARY_API_SECRET,
   );
 
-  ApiResponse.ok(res, {
-    timestamp,
-    signature,
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    apiKey: process.env.CLOUDINARY_API_KEY,
-    folder,
-  }, 'Upload signature generated');
+  ApiResponse.ok(
+    res,
+    {
+      timestamp,
+      signature,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      folder,
+    },
+    "Upload signature generated",
+  );
 });
 
 /**
@@ -40,11 +48,11 @@ const getUploadSignature = asyncHandler(async (req, res) => {
 const deleteUpload = asyncHandler(async (req, res) => {
   const { publicId } = req.body;
   if (!publicId) {
-    return ApiResponse.ok(res, null, 'No publicId provided');
+    return ApiResponse.ok(res, null, "No publicId provided");
   }
 
   await cloudinary.uploader.destroy(publicId);
-  ApiResponse.ok(res, null, 'File deleted from Cloudinary');
+  ApiResponse.ok(res, null, "File deleted from Cloudinary");
 });
 
 module.exports = { getUploadSignature, deleteUpload };
