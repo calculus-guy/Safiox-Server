@@ -244,7 +244,7 @@ const removeDeviceToken = asyncHandler(async (req, res) => {
 const getUserProfile = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
-  const user = await User.findById(userId).select('name username avatar status role createdAt');
+  const user = await User.findById(userId).select('username avatar status role createdAt');
   if (!user) throw ApiError.notFound('User not found');
 
   const [followerCount, followingCount, posts, isFollowing] = await Promise.all([
@@ -260,7 +260,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
   ApiResponse.ok(res, {
     user: {
       _id: user._id,
-      name: user.name,
       username: user.username,
       avatar: user.avatar,
       status: user.status,

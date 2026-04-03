@@ -8,6 +8,9 @@ const Comment = require('../models/Comment');
 const SOSAlert = require('../models/SOSAlert');
 const Incident = require('../models/Incident');
 const Notification = require('../models/Notification');
+const CommunityAlert = require('../models/CommunityAlert');
+const CommunityResponder = require('../models/CommunityResponder');
+const CommunityMessage = require('../models/CommunityMessage');
 const EmailService = require('../services/email.service');
 
 // ══════════════════════════════════════════════════════
@@ -321,6 +324,8 @@ const getAnalytics = asyncHandler(async (req, res) => {
     totalIncidents,
     activeSOS,
     resolvedSOS,
+    activeCommunityAlerts,
+    totalResponders,
   ] = await Promise.all([
     User.countDocuments({ role: 'personal' }),
     Organization.countDocuments(),
@@ -330,9 +335,10 @@ const getAnalytics = asyncHandler(async (req, res) => {
     Incident.countDocuments(),
     SOSAlert.countDocuments({ status: { $in: ['active', 'escalated'] } }),
     SOSAlert.countDocuments({ status: 'resolved' }),
+    CommunityAlert.countDocuments({ status: 'active' }),
+    CommunityResponder.countDocuments(),
   ]);
 
-  // New users in last 7 days
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const newUsersThisWeek = await User.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
 
@@ -343,6 +349,217 @@ const getAnalytics = asyncHandler(async (req, res) => {
       feed: { totalPosts },
       incidents: { total: totalIncidents },
       sos: { active: activeSOS, resolved: resolvedSOS },
+      community: { activeAlerts: activeCommunityAlerts, totalResponders },
+    },
+  });
+});
+
+// ══════════════════════════════════════════════════════
+// COMMUNITY RESPONDER MANAGEMENT (Admin)
+// ══════════════════════════════════════════════════════
+
+/**
+ * @desc    Get all community alerts (paginated, filterable by status)
+ * @route   GET /api/admin/community/alerts
+ * @access  Admin
+ */
+const getCommunityAlerts = asyncHandler(async (req, res) => {
+  const { status, page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = {};
+  if (status && status !== 'all') query.status = status;
+
+  const [alerts, total] = await Promise.all([
+    CommunityAlert.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate('userId', 'name email avatar'),
+    CommunityAlert.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, alerts, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+/**
+ * @desc    Get single community alert detail with full responder list
+ * @route   GET /api/admin/community/alerts/:id
+ * @access  Admin
+ */
+const getCommunityAlertById = asyncHandler(async (req, res) => {
+  const alert = await CommunityAlert.findById(req.params.id)
+    .populate('userId', 'name email avatar');
+  if (!alert) throw ApiError.notFound('Community alert not found');
+  ApiResponse.ok(res, { alert });
+});
+
+/**
+ * @desc    Admin force-resolve a community alert
+ * @route   PUT /api/admin/community/alerts/:id/resolve
+ * @access  Admin
+ */
+const adminResolveCommunityAlert = asyncHandler(async (req, res) => {
+  const alert = await CommunityAlert.findById(req.params.id);
+  if (!alert) throw ApiError.notFound('Community alert not found');
+
+  alert.status = 'completed';
+  alert.completedAt = new Date();
+  alert.duration = Math.round((Date.now() - alert.createdAt.getTime()) / 1000);
+  await alert.save();
+
+  await CommunityMessage.create({
+    communityAlertId: alert._id,
+    senderId: req.user.id,
+    senderName: 'System',
+    text: 'This alert has been resolved by an administrator.',
+    type: 'system',
+  });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(`community_alert_${alert._id}`).emit('community:alert-completed', {
+      alertId: alert._id,
+      resolvedBy: 'admin',
+    });
+  }
+
+  ApiResponse.ok(res, { alert }, 'Community alert resolved by admin');
+});
+
+/**
+ * @desc    Admin force-cancel a community alert
+ * @route   PUT /api/admin/community/alerts/:id/cancel
+ * @access  Admin
+ */
+const adminCancelCommunityAlert = asyncHandler(async (req, res) => {
+  const alert = await CommunityAlert.findById(req.params.id);
+  if (!alert) throw ApiError.notFound('Community alert not found');
+
+  alert.status = 'cancelled';
+  alert.cancelledAt = new Date();
+  await alert.save();
+
+  const io = req.app.get('io');
+  if (io) {
+    io.to(`community_alert_${alert._id}`).emit('community:alert-cancelled', {
+      alertId: alert._id,
+      cancelledBy: 'admin',
+    });
+  }
+
+  ApiResponse.ok(res, null, 'Community alert cancelled by admin');
+});
+
+/**
+ * @desc    Get all registered community responders (paginated)
+ * @route   GET /api/admin/community/responders
+ * @access  Admin
+ */
+const getCommunityResponders = asyncHandler(async (req, res) => {
+  const { available, page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = {};
+  if (available === 'true') query.available = true;
+  if (available === 'false') query.available = false;
+
+  const [responders, total] = await Promise.all([
+    CommunityResponder.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate('userId', 'name email avatar'),
+    CommunityResponder.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, responders, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+/**
+ * @desc    Verify / unverify a community responder
+ * @route   PUT /api/admin/community/responders/:id/verify
+ * @access  Admin
+ */
+const verifyCommunityResponder = asyncHandler(async (req, res) => {
+  const { verified } = req.body;
+  const responder = await CommunityResponder.findByIdAndUpdate(
+    req.params.id,
+    { verified: verified !== false },
+    { new: true }
+  ).populate('userId', 'name email');
+  if (!responder) throw ApiError.notFound('Responder not found');
+
+  await Notification.create({
+    userId: responder.userId._id,
+    type: 'system',
+    title: responder.verified ? '✅ Responder Verified' : 'Responder Status Updated',
+    body: responder.verified
+      ? 'Your community responder profile has been verified by an admin.'
+      : 'Your community responder verification has been revoked.',
+    data: {},
+  });
+
+  ApiResponse.ok(res, { responder }, `Responder ${responder.verified ? 'verified' : 'unverified'}`);
+});
+
+/**
+ * @desc    Remove a community responder profile
+ * @route   DELETE /api/admin/community/responders/:id
+ * @access  Admin
+ */
+const deleteCommunityResponder = asyncHandler(async (req, res) => {
+  const responder = await CommunityResponder.findByIdAndDelete(req.params.id);
+  if (!responder) throw ApiError.notFound('Responder not found');
+  ApiResponse.ok(res, null, 'Responder profile removed');
+});
+
+/**
+ * @desc    Get community stats summary
+ * @route   GET /api/admin/community/stats
+ * @access  Admin
+ */
+const getCommunityStats = asyncHandler(async (req, res) => {
+  const [
+    totalAlerts,
+    activeAlerts,
+    completedAlerts,
+    cancelledAlerts,
+    totalResponders,
+    availableResponders,
+    verifiedResponders,
+  ] = await Promise.all([
+    CommunityAlert.countDocuments(),
+    CommunityAlert.countDocuments({ status: 'active' }),
+    CommunityAlert.countDocuments({ status: 'completed' }),
+    CommunityAlert.countDocuments({ status: 'cancelled' }),
+    CommunityResponder.countDocuments(),
+    CommunityResponder.countDocuments({ available: true }),
+    CommunityResponder.countDocuments({ verified: true }),
+  ]);
+
+  // Avg responders per completed alert
+  const completedWithResponders = await CommunityAlert.aggregate([
+    { $match: { status: 'completed' } },
+    { $project: { responderCount: { $size: '$responders' } } },
+    { $group: { _id: null, avg: { $avg: '$responderCount' } } },
+  ]);
+
+  ApiResponse.ok(res, {
+    stats: {
+      alerts: { total: totalAlerts, active: activeAlerts, completed: completedAlerts, cancelled: cancelledAlerts },
+      responders: { total: totalResponders, available: availableResponders, verified: verifiedResponders },
+      avgRespondersPerAlert: completedWithResponders[0]?.avg?.toFixed(1) ?? 0,
     },
   });
 });
@@ -363,4 +580,13 @@ module.exports = {
   getActiveSOS,
   adminResolveSOS,
   getAnalytics,
+  // Community
+  getCommunityAlerts,
+  getCommunityAlertById,
+  adminResolveCommunityAlert,
+  adminCancelCommunityAlert,
+  getCommunityResponders,
+  verifyCommunityResponder,
+  deleteCommunityResponder,
+  getCommunityStats,
 };

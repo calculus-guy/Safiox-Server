@@ -31,7 +31,10 @@ const communityAlertSchema = new mongoose.Schema(
       enum: ['anonymous', 'show_id'],
       default: 'show_id',
     },
-    alertOfficialServices: { type: Boolean, default: false },
+    alertOfficialServices: {
+      type: [{ type: String, enum: ['police', 'hospital', 'fire', 'ambulance'] }],
+      default: [],
+    },
     notifyEmergencyContacts: { type: Boolean, default: false },
     shareLocation: { type: Boolean, default: true },
     status: {

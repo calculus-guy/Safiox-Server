@@ -22,6 +22,7 @@ router.get('/nearby', crController.getNearby);
 // ── Alerts ──
 router.post('/alert', validate(createAlertSchema), crController.createAlert);
 router.get('/alert/active', crController.getActiveAlert);
+router.get('/alerts/nearby', crController.getNearbyAlerts);
 router.get('/alert/:id', crController.getAlertById);
 router.put('/alert/:id/respond', validate(updateResponderStatusSchema), crController.respondToAlert);
 router.put('/alert/:id/complete', crController.completeAlert);

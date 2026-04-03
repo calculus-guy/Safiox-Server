@@ -12,7 +12,9 @@ const createAlertSchema = Joi.object({
   }).required(),
   radius: Joi.number().valid(1000, 3000, 10000).default(3000),
   visibility: Joi.string().valid('anonymous', 'show_id').default('show_id'),
-  alertOfficialServices: Joi.boolean().default(false),
+  alertOfficialServices: Joi.array()
+    .items(Joi.string().valid('police', 'hospital', 'fire', 'ambulance'))
+    .default([]),
   notifyEmergencyContacts: Joi.boolean().default(false),
   shareLocation: Joi.boolean().default(true),
 });

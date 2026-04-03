@@ -28,6 +28,16 @@ router.put('/comments/:id/remove', adminController.removeComment);
 router.get('/sos/active', adminController.getActiveSOS);
 router.put('/sos/:id/resolve', adminController.adminResolveSOS);
 
+// ── Community Responders ──
+router.get('/community/stats', adminController.getCommunityStats);
+router.get('/community/alerts', adminController.getCommunityAlerts);
+router.get('/community/alerts/:id', adminController.getCommunityAlertById);
+router.put('/community/alerts/:id/resolve', adminController.adminResolveCommunityAlert);
+router.put('/community/alerts/:id/cancel', adminController.adminCancelCommunityAlert);
+router.get('/community/responders', adminController.getCommunityResponders);
+router.put('/community/responders/:id/verify', adminController.verifyCommunityResponder);
+router.delete('/community/responders/:id', adminController.deleteCommunityResponder);
+
 // ── Analytics ──
 router.get('/analytics', adminController.getAnalytics);
 
