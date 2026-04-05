@@ -65,14 +65,26 @@ const toggleAvailability = asyncHandler(async (req, res) => {
  * @route   PUT /api/community-responders/location
  * @access  Private
  */
+/**
+ * @desc    Update user location (global and responder)
+ * @route   PUT /api/community-responders/location
+ * @access  Private
+ */
 const updateLocation = asyncHandler(async (req, res) => {
   const { latitude, longitude } = req.body;
-  const responder = await CommunityResponder.findOneAndUpdate(
+  const coords = [longitude, latitude];
+
+  // 1. Update global user location (essential for nearby alert discovery)
+  await User.findByIdAndUpdate(req.user.id, {
+    lastLocation: { type: 'Point', coordinates: coords },
+  });
+
+  // 2. Also update responder profile if it exists
+  await CommunityResponder.findOneAndUpdate(
     { userId: req.user.id },
-    { location: { type: 'Point', coordinates: [longitude, latitude] } },
-    { new: true }
+    { location: { type: 'Point', coordinates: coords } }
   );
-  if (!responder) throw ApiError.notFound('Responder profile not found');
+
   ApiResponse.ok(res, null, 'Location updated');
 });
 
@@ -310,7 +322,25 @@ const getActiveAlert = asyncHandler(async (req, res) => {
       { userId: req.user.id, status: 'active' },
       { 'responders.userId': new mongoose.Types.ObjectId(req.user.id), status: 'active' },
     ],
-  }).populate('userId', 'name avatar');
+  })
+    .populate('userId', 'name avatar')
+    .populate('responders.userId', 'name avatar');
+
+  ApiResponse.ok(res, { alert });
+});
+
+/**
+ * @desc    Get the active alert CREATED by the current user
+ * @route   GET /api/community-responders/alert/my-active
+ * @access  Private
+ */
+const getMyActiveAlert = asyncHandler(async (req, res) => {
+  const alert = await CommunityAlert.findOne({
+    userId: req.user.id,
+    status: 'active',
+  })
+    .populate('userId', 'name avatar')
+    .populate('responders.userId', 'name avatar');
 
   ApiResponse.ok(res, { alert });
 });
@@ -322,7 +352,9 @@ const getActiveAlert = asyncHandler(async (req, res) => {
  */
 const getAlertById = asyncHandler(async (req, res) => {
   const alert = await CommunityAlert.findById(req.params.id)
-    .populate('userId', 'name avatar');
+    .populate('userId', 'name avatar')
+    .populate('responders.userId', 'name avatar');
+
   if (!alert) throw ApiError.notFound('Community alert not found');
 
   // Mask identity for anonymous alerts (unless it's the requester themselves)
@@ -579,6 +611,7 @@ module.exports = {
   getNearbyAlerts,
   createAlert,
   getActiveAlert,
+  getMyActiveAlert,
   getAlertById,
   respondToAlert,
   completeAlert,
