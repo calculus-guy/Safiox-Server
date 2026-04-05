@@ -182,6 +182,7 @@ const createAlert = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id).select('name');
 
   // ── 1. Find nearby users (not just registered responders) ──
+  console.log(`[createAlert] Searching for nearby users within ${radius}m of [${coords[0]}, ${coords[1]}]...`);
   const nearbyUsers = await User.find({
     _id: { $ne: req.user.id },
     isDeactivated: { $ne: true },
@@ -194,8 +195,10 @@ const createAlert = asyncHandler(async (req, res) => {
   }).select('_id deviceTokens').limit(100);
 
   const nearbyUserIds = nearbyUsers.map((u) => u._id);
+  console.log(`[createAlert] Found ${nearbyUsers.length} nearby users based on User.lastLocation.`);
 
   // ── 2. Also find registered responders in range ──
+  console.log(`[createAlert] Searching for nearby active responders...`);
   const nearbyResponders = await CommunityResponder.find({
     available: true,
     userId: { $ne: req.user.id },
@@ -213,6 +216,7 @@ const createAlert = asyncHandler(async (req, res) => {
     ...nearbyUserIds.map((id) => id.toString()),
     ...nearbyResponders.map((r) => r.userId.toString()),
   ])];
+  console.log(`[createAlert] Found ${nearbyResponders.length} responders. Total unique users to notify: ${allNotifyIds.length}`);
 
   // Pre-populate responders array with registered responders
   alert.responders = nearbyResponders.map((r) => ({
