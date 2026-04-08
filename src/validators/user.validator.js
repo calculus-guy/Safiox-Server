@@ -4,6 +4,7 @@ const updateProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100),
   phone: Joi.string().trim(),
   avatar: Joi.string().uri().allow(''),
+  username: Joi.string().trim().min(3).max(30).lowercase(),
 });
 
 const updateStatusSchema = Joi.object({

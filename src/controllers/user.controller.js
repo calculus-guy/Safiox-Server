@@ -28,18 +28,27 @@ const getProfile = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Update user profile (name, phone, avatar)
+ * @desc    Update user profile (name, phone, avatar, username)
  * @route   PUT /api/users/profile
  * @access  Private
  */
 const updateProfile = asyncHandler(async (req, res) => {
-  const { name, phone, avatar } = req.body;
+  const { name, phone, avatar, username } = req.body;
   const user = await User.findById(req.user.id);
   if (!user) throw ApiError.notFound('User not found');
 
   if (name) user.name = name;
   if (phone) user.phone = phone;
   if (avatar !== undefined) user.avatar = avatar;
+
+  if (username !== undefined) {
+    const clean = username.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+    if (clean.length < 3) throw ApiError.badRequest('Username must be at least 3 characters');
+    if (clean.length > 30) throw ApiError.badRequest('Username cannot exceed 30 characters');
+    const existing = await User.findOne({ username: clean, _id: { $ne: req.user.id } });
+    if (existing) throw ApiError.conflict('Username is already taken');
+    user.username = clean;
+  }
 
   await user.save();
   ApiResponse.ok(res, { user: user.toSafeObject() }, 'Profile updated');
