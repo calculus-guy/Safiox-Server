@@ -180,12 +180,14 @@ const createAlert = asyncHandler(async (req, res) => {
 
   const io = req.app.get('io');
   const user = await User.findById(req.user.id).select('name');
+  const creatorObjectId = new mongoose.Types.ObjectId(req.user.id);
 
   // ── 1. Find nearby users (not just registered responders) ──
-  console.log(`[createAlert] Searching for nearby users within ${radius}m of [${coords[0]}, ${coords[1]}]...`);
+  // Exclude: the creator, deactivated accounts, and users with default [0,0] location (never set)
   const nearbyUsers = await User.find({
-    _id: { $ne: req.user.id },
+    _id: { $ne: creatorObjectId },
     isDeactivated: { $ne: true },
+    'lastLocation.coordinates': { $ne: [0, 0] },
     lastLocation: {
       $nearSphere: {
         $geometry: { type: 'Point', coordinates: coords },
@@ -195,13 +197,11 @@ const createAlert = asyncHandler(async (req, res) => {
   }).select('_id deviceTokens').limit(100);
 
   const nearbyUserIds = nearbyUsers.map((u) => u._id);
-  console.log(`[createAlert] Found ${nearbyUsers.length} nearby users based on User.lastLocation.`);
 
   // ── 2. Also find registered responders in range ──
-  console.log(`[createAlert] Searching for nearby active responders...`);
   const nearbyResponders = await CommunityResponder.find({
     available: true,
-    userId: { $ne: req.user.id },
+    userId: { $ne: creatorObjectId },
     location: {
       $nearSphere: {
         $geometry: { type: 'Point', coordinates: coords },
@@ -210,13 +210,12 @@ const createAlert = asyncHandler(async (req, res) => {
     },
   }).select('userId name _id').limit(50);
 
-  // Merge responder userIds into notified set
-  const responderUserIdSet = new Set(nearbyResponders.map((r) => r.userId.toString()));
+  // Merge into a unique set, explicitly excluding the creator from both lists
+  const creatorIdStr = req.user.id.toString();
   const allNotifyIds = [...new Set([
     ...nearbyUserIds.map((id) => id.toString()),
     ...nearbyResponders.map((r) => r.userId.toString()),
-  ])];
-  console.log(`[createAlert] Found ${nearbyResponders.length} responders. Total unique users to notify: ${allNotifyIds.length}`);
+  ])].filter((id) => id !== creatorIdStr);
 
   // Pre-populate responders array with registered responders
   alert.responders = nearbyResponders.map((r) => ({
