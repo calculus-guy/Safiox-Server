@@ -10,6 +10,12 @@ const reportIncidentSchema = Joi.object({
     longitude: Joi.number().min(-180).max(180).required(),
     address: Joi.string().trim().allow(''),
   }).required(),
+  media: Joi.array().items(
+    Joi.object({
+      url: Joi.string().uri().required(),
+      type: Joi.string().valid('image', 'video').default('image'),
+    })
+  ).default([]),
 });
 
 module.exports = { reportIncidentSchema };
