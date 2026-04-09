@@ -12,7 +12,7 @@ const Notification = require('../models/Notification');
  * @access  Private
  */
 const reportIncident = asyncHandler(async (req, res) => {
-  const { organizationId, type, severity, description, location } = req.body;
+  const { organizationId, type, severity, description, location, media } = req.body;
 
   // Verify org exists
   const org = await Organization.findById(organizationId);
@@ -34,6 +34,7 @@ const reportIncident = asyncHandler(async (req, res) => {
       coordinates: [location.longitude, location.latitude],
       address: location.address || '',
     },
+    media: Array.isArray(media) ? media : [],
     timeline: [
       { action: 'received', timestamp: new Date(), note: 'Incident reported by user' },
     ],

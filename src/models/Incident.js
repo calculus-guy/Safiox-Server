@@ -78,7 +78,12 @@ const incidentSchema = new mongoose.Schema(
     ],
 
     // ── Media evidence ──
-    media: [{ type: String }], // Cloudinary URLs
+    media: [
+      {
+        url: { type: String, trim: true },
+        type: { type: String, enum: ['image', 'video'], default: 'image' },
+      },
+    ],
   },
   {
     timestamps: true,
