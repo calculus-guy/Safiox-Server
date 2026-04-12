@@ -564,6 +564,135 @@ const getCommunityStats = asyncHandler(async (req, res) => {
   });
 });
 
+// ══════════════════════════════════════════════════════
+// FEED MODERATION — LIST
+// ══════════════════════════════════════════════════════
+
+/**
+ * @desc    Get all feed posts (paginated, filterable by removed status)
+ * @route   GET /api/admin/posts
+ * @access  Admin
+ */
+const getPosts = asyncHandler(async (req, res) => {
+  const { removed, search, page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = {};
+  if (removed === 'true') query.isRemoved = true;
+  else if (removed === 'false') query.isRemoved = false;
+  // default: return all (both removed and active)
+
+  if (search) {
+    query.content = { $regex: search, $options: 'i' };
+  }
+
+  const [posts, total] = await Promise.all([
+    FeedPost.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate('authorId', 'name username avatar')
+      .populate('removedBy', 'name'),
+    FeedPost.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, posts, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+// ══════════════════════════════════════════════════════
+// SOS HISTORY
+// ══════════════════════════════════════════════════════
+
+/**
+ * @desc    Get paginated SOS alert history (all statuses)
+ * @route   GET /api/admin/sos/history
+ * @access  Admin
+ */
+const getSOSHistory = asyncHandler(async (req, res) => {
+  const { status, page = 1, limit = 20, from, to } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = {};
+  if (status && status !== 'all') query.status = status;
+  if (from || to) {
+    query.createdAt = {};
+    if (from) query.createdAt.$gte = new Date(from);
+    if (to) query.createdAt.$lte = new Date(to);
+  }
+
+  const [alerts, total] = await Promise.all([
+    SOSAlert.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate('userId', 'name phone avatar'),
+    SOSAlert.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, alerts, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+// ══════════════════════════════════════════════════════
+// INCIDENTS OVERSIGHT
+// ══════════════════════════════════════════════════════
+
+/**
+ * @desc    Get all incidents across all organizations (paginated, filterable)
+ * @route   GET /api/admin/incidents
+ * @access  Admin
+ */
+const getAllIncidents = asyncHandler(async (req, res) => {
+  const { status, type, orgId, page = 1, limit = 20 } = req.query;
+  const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+  const query = {};
+  if (status && status !== 'all') query.status = status;
+  if (type && type !== 'all') query.type = type;
+  if (orgId) query.organizationId = orgId;
+
+  const [incidents, total] = await Promise.all([
+    Incident.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10))
+      .populate('organizationId', 'name type')
+      .populate('userId', 'name phone avatar'),
+    Incident.countDocuments(query),
+  ]);
+
+  ApiResponse.paginated(res, incidents, {
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10),
+    total,
+    pages: Math.ceil(total / parseInt(limit, 10)),
+  });
+});
+
+/**
+ * @desc    Get single incident detail (admin view)
+ * @route   GET /api/admin/incidents/:id
+ * @access  Admin
+ */
+const getIncidentById = asyncHandler(async (req, res) => {
+  const incident = await Incident.findById(req.params.id)
+    .populate('organizationId', 'name type phone address')
+    .populate('userId', 'name phone avatar')
+    .populate('assignedUnitId', 'unitName type status')
+    .populate('assignedStaffId', 'name role');
+  if (!incident) throw ApiError.notFound('Incident not found');
+  ApiResponse.ok(res, { incident });
+});
+
 module.exports = {
   getUsers,
   getUserById,
@@ -577,8 +706,10 @@ module.exports = {
   removePost,
   restorePost,
   removeComment,
+  getPosts,
   getActiveSOS,
   adminResolveSOS,
+  getSOSHistory,
   getAnalytics,
   // Community
   getCommunityAlerts,
@@ -589,4 +720,7 @@ module.exports = {
   verifyCommunityResponder,
   deleteCommunityResponder,
   getCommunityStats,
+  // Incidents
+  getAllIncidents,
+  getIncidentById,
 };

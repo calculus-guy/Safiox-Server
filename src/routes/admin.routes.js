@@ -20,13 +20,19 @@ router.put('/organizations/:id/approve', adminController.approveOrganization);
 router.put('/organizations/:id/reject', adminController.rejectOrganization);
 
 // ── Content Moderation ──
+router.get('/posts', adminController.getPosts);
 router.put('/posts/:id/remove', adminController.removePost);
 router.put('/posts/:id/restore', adminController.restorePost);
 router.put('/comments/:id/remove', adminController.removeComment);
 
 // ── SOS Management ──
 router.get('/sos/active', adminController.getActiveSOS);
+router.get('/sos/history', adminController.getSOSHistory);
 router.put('/sos/:id/resolve', adminController.adminResolveSOS);
+
+// ── Incidents Oversight ──
+router.get('/incidents', adminController.getAllIncidents);
+router.get('/incidents/:id', adminController.getIncidentById);
 
 // ── Community Responders ──
 router.get('/community/stats', adminController.getCommunityStats);
