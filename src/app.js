@@ -11,9 +11,23 @@ const app = express();
 app.use(helmet());
 
 // ── CORS ──
+const allowedOrigins = [
+  'https://safiox.netlify.app',
+  'https://safiox.com',
+  'https://www.safiox.com',
+  'http://localhost:8080',
+  'http://localhost:8081',
+  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
