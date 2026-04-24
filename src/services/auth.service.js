@@ -217,7 +217,7 @@ class AuthService {
       // Increment failed attempts
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
       if (user.failedLoginAttempts >= 5) {
-        user.lockUntil = Date.now() + 30 * 60 * 1000; // 30 min
+        user.lockUntil = Date.now() + 5 * 60 * 1000; // 5 min
       }
       await user.save();
       throw ApiError.unauthorized("Invalid email or password");
