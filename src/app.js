@@ -15,6 +15,8 @@ const allowedOrigins = [
   'https://safiox.netlify.app',
   'https://safiox.com',
   'https://www.safiox.com',
+  'http://safiox.com',
+  'http://www.safiox.com',
   'http://localhost:8080',
   'http://localhost:8081',
   ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
