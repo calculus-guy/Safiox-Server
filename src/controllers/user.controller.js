@@ -226,6 +226,12 @@ const updateNotificationSettings = asyncHandler(async (req, res) => {
  */
 const updateDeviceToken = asyncHandler(async (req, res) => {
   const { token } = req.body;
+
+  const { Expo } = require('expo-server-sdk');
+  if (!Expo.isExpoPushToken(token)) {
+    throw ApiError.badRequest('Invalid Expo push token format');
+  }
+
   await User.findByIdAndUpdate(req.user.id, {
     $addToSet: { deviceTokens: token },
   });

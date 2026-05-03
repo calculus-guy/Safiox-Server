@@ -27,13 +27,25 @@ const registerSocketHandlers = (io, socket) => {
   // ── User location update (background) ──
   socket.on('user:location-update', async ({ latitude, longitude }) => {
     try {
+      if (latitude == null || longitude == null) return;
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      // Reject default/invalid coordinates
+      if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+
       const User = require('../models/User');
-      await User.findByIdAndUpdate(userId, {
-        lastLocation: {
-          type: 'Point',
-          coordinates: [longitude, latitude],
-        },
-      });
+      const CommunityResponder = require('../models/CommunityResponder');
+
+      await Promise.all([
+        User.findByIdAndUpdate(userId, {
+          lastLocation: { type: 'Point', coordinates: [lng, lat] },
+        }),
+        // Keep responder profile location in sync too
+        CommunityResponder.findOneAndUpdate(
+          { userId },
+          { location: { type: 'Point', coordinates: [lng, lat] } }
+        ),
+      ]);
     } catch (err) {
       // Silent fail — location updates are best-effort
     }

@@ -72,18 +72,27 @@ const toggleAvailability = asyncHandler(async (req, res) => {
  */
 const updateLocation = asyncHandler(async (req, res) => {
   const { latitude, longitude } = req.body;
-  const coords = [longitude, latitude];
 
-  // 1. Update global user location (essential for nearby alert discovery)
-  await User.findByIdAndUpdate(req.user.id, {
-    lastLocation: { type: 'Point', coordinates: coords },
-  });
+  const lat = parseFloat(latitude);
+  const lng = parseFloat(longitude);
 
-  // 2. Also update responder profile if it exists
-  await CommunityResponder.findOneAndUpdate(
-    { userId: req.user.id },
-    { location: { type: 'Point', coordinates: coords } }
-  );
+  if (isNaN(lat) || isNaN(lng)) throw ApiError.badRequest('Invalid coordinates');
+  // Reject default [0,0] — it means the device hasn't acquired a real fix yet
+  if (lat === 0 && lng === 0) throw ApiError.badRequest('Invalid coordinates: device location not yet available');
+
+  const coords = [lng, lat];
+
+  await Promise.all([
+    // 1. Update global user location (essential for nearby alert discovery)
+    User.findByIdAndUpdate(req.user.id, {
+      lastLocation: { type: 'Point', coordinates: coords },
+    }),
+    // 2. Also update responder profile if it exists
+    CommunityResponder.findOneAndUpdate(
+      { userId: req.user.id },
+      { location: { type: 'Point', coordinates: coords } }
+    ),
+  ]);
 
   ApiResponse.ok(res, null, 'Location updated');
 });
@@ -183,11 +192,13 @@ const createAlert = asyncHandler(async (req, res) => {
   const creatorObjectId = new mongoose.Types.ObjectId(req.user.id);
 
   // ── 1. Find nearby users (not just registered responders) ──
-  // Exclude: the creator, deactivated accounts, and users with default [0,0] location (never set)
+  // Exclude: the creator and deactivated accounts.
+  // NOTE: We no longer exclude [0,0] here — that was silently dropping users who
+  // never updated their location. Responders with stale/default coords are caught
+  // by the registered-responder query below which uses their responder profile location.
   const nearbyUsers = await User.find({
     _id: { $ne: creatorObjectId },
     isDeactivated: { $ne: true },
-    'lastLocation.coordinates': { $ne: [0, 0] },
     lastLocation: {
       $nearSphere: {
         $geometry: { type: 'Point', coordinates: coords },
