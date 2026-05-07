@@ -176,6 +176,35 @@ class EmailService {
       text: `${org.name}, your organization has been verified on Safiox!`,
     });
   }
+
+  /**
+   * Send organization verification rejection.
+   */
+  static async sendOrgRejectionEmail(org, reason) {
+    await sendEmail({
+      to: org.email,
+      subject: 'Safiox — Organization Verification Update',
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 30px; border: 2px solid #EF4444; border-radius: 12px;">
+          <h2 style="color: #EF4444;">Verification Unsuccessful ❌</h2>
+          <p style="color: #374151; font-size: 15px;">
+            Hi ${org.name}, unfortunately your organization verification was not approved.
+          </p>
+          ${reason ? `
+          <div style="background: #FEE2E2; padding: 16px; border-radius: 8px; margin: 15px 0;">
+            <p style="margin: 0; color: #991B1B;"><strong>Reason:</strong> ${reason}</p>
+          </div>` : ''}
+          <p style="color: #374151; font-size: 15px;">
+            Please review the reason above, make the necessary corrections, and resubmit your application. If you believe this is an error, please contact our support team.
+          </p>
+          <p style="color: #6B7280; font-size: 13px; margin-top: 20px;">
+            This is an automated message from Safiox.
+          </p>
+        </div>
+      `,
+      text: `Hi ${org.name}, your organization verification was not approved.${reason ? ` Reason: ${reason}` : ''} Please contact support if you need help.`,
+    });
+  }
 }
 
 module.exports = EmailService;

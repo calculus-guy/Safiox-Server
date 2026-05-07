@@ -59,6 +59,8 @@ const organizationSchema = new mongoose.Schema(
     verificationDocuments: [{ type: String }], // Cloudinary URLs
     verificationCode: { type: String },
     verificationRejectionReason: { type: String },
+    verifiedAt: { type: Date },
+    rejectedAt: { type: Date },
 
     // ── Location ──
     location: {

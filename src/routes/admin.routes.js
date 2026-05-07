@@ -14,8 +14,10 @@ router.put('/users/:id/deactivate', adminController.deactivateUser);
 router.put('/users/:id/reactivate', adminController.reactivateUser);
 
 // ── Organizations ──
+// NOTE: static routes (/pending) must come before param routes (/:id)
 router.get('/organizations', adminController.getAllOrganizations);
 router.get('/organizations/pending', adminController.getPendingOrgs);
+router.get('/organizations/:id', adminController.getOrganizationById);
 router.put('/organizations/:id/approve', adminController.approveOrganization);
 router.put('/organizations/:id/reject', adminController.rejectOrganization);
 

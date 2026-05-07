@@ -156,6 +156,18 @@ const getAllOrganizations = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get single organization detail (for admin review)
+ * @route   GET /api/admin/organizations/:id
+ * @access  Admin
+ */
+const getOrganizationById = asyncHandler(async (req, res) => {
+  const org = await Organization.findById(req.params.id)
+    .populate('userId', 'name email phone createdAt');
+  if (!org) throw ApiError.notFound('Organization not found');
+  ApiResponse.ok(res, { organization: org });
+});
+
+/**
  * @desc    Approve organization
  * @route   PUT /api/admin/organizations/:id/approve
  * @access  Admin
@@ -163,7 +175,7 @@ const getAllOrganizations = asyncHandler(async (req, res) => {
 const approveOrganization = asyncHandler(async (req, res) => {
   const org = await Organization.findByIdAndUpdate(
     req.params.id,
-    { verificationStatus: 'verified' },
+    { verificationStatus: 'verified', verifiedAt: new Date(), verificationRejectionReason: '' },
     { new: true }
   );
   if (!org) throw ApiError.notFound('Organization not found');
@@ -195,17 +207,29 @@ const rejectOrganization = asyncHandler(async (req, res) => {
   const { reason } = req.body;
   const org = await Organization.findByIdAndUpdate(
     req.params.id,
-    { verificationStatus: 'rejected', verificationRejectionReason: reason || '' },
+    {
+      verificationStatus: 'rejected',
+      rejectedAt: new Date(),
+      verificationRejectionReason: reason || '',
+    },
     { new: true }
   );
   if (!org) throw ApiError.notFound('Organization not found');
+
+  try {
+    await EmailService.sendOrgRejectionEmail(org, reason);
+  } catch (err) {
+    console.error('Failed to send org rejection email:', err.message);
+  }
 
   // In-app notification to org admin
   await Notification.create({
     userId: org.userId,
     type: 'org_rejected',
     title: '❌ Organization Verification Failed',
-    body: reason ? `Your organization was not verified. Reason: ${reason}` : 'Your organization verification was unsuccessful. Please contact support.',
+    body: reason
+      ? `Your organization was not verified. Reason: ${reason}`
+      : 'Your organization verification was unsuccessful. Please contact support.',
     data: { organizationId: org._id },
   });
 
@@ -701,6 +725,7 @@ module.exports = {
   reactivateUser,
   getPendingOrgs,
   getAllOrganizations,
+  getOrganizationById,
   approveOrganization,
   rejectOrganization,
   removePost,
