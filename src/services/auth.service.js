@@ -173,6 +173,32 @@ class AuthService {
       console.error("Failed to send org registration email:", err.message);
     }
 
+    // Notify all admin users about the new org pending verification
+    try {
+      const Notification = require("../models/Notification");
+      const PushService = require("./push.service");
+      const admins = await User.find({ role: "admin" }).select("_id");
+      if (admins.length > 0) {
+        const adminIds = admins.map((a) => a._id);
+        await Notification.insertMany(
+          adminIds.map((adminId) => ({
+            userId: adminId,
+            type: "org_registration",
+            title: "🏢 New Organization Registration",
+            body: `${name} (${orgType}) has submitted a registration and is pending verification.`,
+            data: { organizationId: org._id },
+          }))
+        );
+        await PushService.sendToMultiple(adminIds, {
+          title: "🏢 New Organization Registration",
+          body: `${name} (${orgType}) is pending verification.`,
+          data: { type: "org_registration", organizationId: org._id.toString() },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to notify admins of org registration:", err.message);
+    }
+
     return {
       user: user.toSafeObject(),
       organization: org,

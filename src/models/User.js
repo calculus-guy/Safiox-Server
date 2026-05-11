@@ -93,7 +93,7 @@ const userSchema = new mongoose.Schema(
 
     // ── Fake call config ──
     fakeCallConfig: {
-      callerName: { type: String, default: 'Mum' },
+      callerName: { type: String, default: '' },
       callerNumber: { type: String, default: '' },
       delay: { type: Number, default: 5, enum: [5, 10, 30] },
     },

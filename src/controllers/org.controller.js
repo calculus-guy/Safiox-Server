@@ -81,6 +81,14 @@ const getIncidentById = asyncHandler(async (req, res) => {
     .populate('assignedStaffId', 'name role status')
     .populate('userId', 'name phone avatar');
   if (!incident) throw ApiError.notFound('Incident not found');
+
+  // Mark as viewed if not already
+  if (!incident.viewedAt) {
+    incident.viewedAt = new Date();
+    incident.viewedBy = req.user.id;
+    await incident.save();
+  }
+
   ApiResponse.ok(res, { incident });
 });
 

@@ -64,6 +64,10 @@ const incidentSchema = new mongoose.Schema(
       ref: 'Staff',
     },
 
+    // ── View tracking ──
+    viewedAt: { type: Date },
+    viewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
     // ── Response timeline ──
     timeline: [
       {
