@@ -52,7 +52,7 @@ const registerOrgSchema = Joi.object({
   // Step 5: Compliance
   verificationCode: Joi.string().trim().allow(''),
   // verificationDocuments: pre-uploaded Cloudinary URLs sent from frontend
-  verificationDocuments: Joi.array().items(Joi.string().uri()).default([]),
+  verificationDocuments: Joi.array().items(Joi.string().trim().min(1)).default([]),
 
   // Account password
   password: Joi.string().min(8).max(128).required()
