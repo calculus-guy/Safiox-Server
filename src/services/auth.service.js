@@ -90,11 +90,16 @@ class AuthService {
     });
 
     // Upload verification documents to Cloudinary from multer memory buffers
+    // OR accept pre-uploaded Cloudinary URLs sent directly in the request body
     const cloudinary = require("../config/cloudinary");
     const { Readable } = require("stream");
-    const verificationDocuments = [];
+    let verificationDocuments = [];
 
-    if (files && files.length > 0) {
+    // If frontend sent pre-uploaded URLs (preferred path)
+    if (data.verificationDocuments && Array.isArray(data.verificationDocuments) && data.verificationDocuments.length > 0) {
+      verificationDocuments = data.verificationDocuments.filter((url) => typeof url === 'string' && url.startsWith('http'));
+    } else if (files && files.length > 0) {
+      // Fallback: process raw file buffers from multer (legacy path)
       for (const file of files) {
         try {
           const uploadResult = await new Promise((resolve, reject) => {
