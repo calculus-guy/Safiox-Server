@@ -9,7 +9,7 @@ const cloudinary = require("../config/cloudinary");
  * @access  Private
  */
 const getUploadSignature = asyncHandler(async (req, res) => {
-  const { folder = "safiox/general" } = req.query;
+  const { folder = "safiox/general", resourceType = "image" } = req.query;
 
   const timestamp = Math.round(new Date().getTime() / 1000);
 
@@ -35,6 +35,7 @@ const getUploadSignature = asyncHandler(async (req, res) => {
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
       apiKey: process.env.CLOUDINARY_API_KEY,
       folder,
+      resourceType,
     },
     "Upload signature generated",
   );
